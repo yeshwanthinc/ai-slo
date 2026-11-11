@@ -52,6 +52,31 @@ Both failures are injected on purpose, so the misses they cause are expected. Us
 30/30 tasks. The output is in `examples/ollama_records.jsonl`, and the run log is in
 `examples/ollama_run.log`.
 
+### Viewing traces in Phoenix
+
+The `run` command also exports OpenTelemetry traces to a local
+[Arize Phoenix](https://github.com/Arize-ai/phoenix) server, one span tree per task:
+
+- `invoke_agent` (root): task class, terminal state, steps, total tokens.
+- `chat`: one per model call, with token counts and Ollama load and prompt-eval durations.
+- `execute_tool`: one per tool call, with the tool name and outcome. Failed calls are marked as errors.
+- `memory.read` / `memory.write`: nested under memory tool calls, with the observed and latest versions.
+
+```bash
+.venv/bin/phoenix serve                       # UI at http://localhost:6006
+.venv/bin/python -m ai_slo run --model qwen2.5:7b --out examples/ollama_traced_records.jsonl
+```
+
+Then open http://localhost:6006 and choose the `default` project. Use `--no-trace`
+to skip tracing; the run then checks nothing about Phoenix.
+
+The project uses a local `.venv` (Python dependencies: `requests`, `arize-phoenix`,
+`opentelemetry-sdk`, `opentelemetry-exporter-otlp-proto-http`, `pytest`). Install with
+`python3 -m venv .venv && .venv/bin/pip install arize-phoenix opentelemetry-sdk opentelemetry-exporter-otlp-proto-http requests pytest`.
+
+Span counts from the traced run matched the records exactly: 30 `invoke_agent`,
+56 `chat`, 38 `execute_tool`, and 20 memory spans (12 writes, 8 reads).
+
 ### Record format
 
 One JSON object per line. See `ai_slo/record.py` for the full schema. Example:

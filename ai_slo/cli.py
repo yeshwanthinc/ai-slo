@@ -37,24 +37,51 @@ def _run_demo(args: argparse.Namespace) -> int:
     client = OllamaClient(model=args.model, host=args.host, timeout=args.timeout)
     client.check()  # fail fast: an unreachable server should not become 'failed' records
     print(f"Ollama OK at {client.host}, model {client.model!r}", file=sys.stderr)
+
+    provider = None
+    if not args.no_trace:
+        from .tracing import setup_tracing
+        _check_phoenix(args.phoenix)
+        provider = setup_tracing(endpoint=args.phoenix, simple=True)
+        print(f"Tracing to Phoenix at {args.phoenix}", file=sys.stderr)
+
     tasks = DEMO_TASKS[: args.tasks] if args.tasks else DEMO_TASKS
     records = []
-    for i, (prompt, task_class) in enumerate(tasks, start=1):
-        # Fresh working memory per task, so tasks do not see each other's keys.
-        pad = Scratchpad(inject_stale=not args.no_stale)
-        tools = default_tools(inject_failure=not args.no_failure, scratchpad=pad)
-        print(f"[{i}/{len(tasks)}] {task_class}: {prompt}", file=sys.stderr)
-        rec = run_task(client, Task(prompt, task_class), tools,
-                       max_steps=args.max_steps, token_budget=args.token_budget)
-        rec.memory_reads = pad.drain_reads()
-        print(f"    -> {rec.terminal_state} in {rec.steps_taken} steps", file=sys.stderr)
-        records.append(rec)
+    try:
+        for i, (prompt, task_class) in enumerate(tasks, start=1):
+            # Fresh working memory per task, so tasks do not see each other's keys.
+            pad = Scratchpad(inject_stale=not args.no_stale)
+            tools = default_tools(inject_failure=not args.no_failure, scratchpad=pad)
+            print(f"[{i}/{len(tasks)}] {task_class}: {prompt}", file=sys.stderr)
+            rec = run_task(client, Task(prompt, task_class), tools,
+                           max_steps=args.max_steps, token_budget=args.token_budget)
+            rec.memory_reads = pad.drain_reads()
+            print(f"    -> {rec.terminal_state} in {rec.steps_taken} steps", file=sys.stderr)
+            records.append(rec)
+    finally:
+        if provider is not None:
+            provider.force_flush()
+            provider.shutdown()
 
     with open(args.out, "w", encoding="utf-8") as fh:
         for rec in records:
             fh.write(json.dumps(rec.to_dict()) + "\n")
     print(f"wrote {len(records)} records to {args.out}", file=sys.stderr)
     return 0
+
+
+def _check_phoenix(endpoint: str) -> None:
+    """Fail fast if Phoenix is not reachable, instead of silently dropping spans."""
+    import requests
+
+    base = endpoint.rsplit("/v1/traces", 1)[0]
+    try:
+        requests.get(base, timeout=5).raise_for_status()
+    except requests.RequestException as exc:
+        raise ValueError(
+            f"cannot reach Phoenix at {base} ({exc}). Start it with `phoenix serve`, "
+            f"or pass --no-trace."
+        ) from exc
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -74,6 +101,9 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--timeout", type=float, default=300.0)
     run.add_argument("--no-failure", action="store_true", help="do not inject the broken web_lookup tool")
     run.add_argument("--no-stale", action="store_true", help="do not inject stale working-memory reads")
+    run.add_argument("--phoenix", default="http://localhost:6006/v1/traces",
+                     help="Phoenix OTLP/HTTP traces endpoint")
+    run.add_argument("--no-trace", action="store_true", help="do not export OpenTelemetry traces")
     args = parser.parse_args(argv)
 
     if args.command == "run":

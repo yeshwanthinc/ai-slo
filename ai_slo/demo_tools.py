@@ -7,8 +7,10 @@ Injected failures (the article injected five; these are two):
 
 from __future__ import annotations
 
+from . import attributes as A
 from .record import MemoryRead
 from .runner import AgentTool
+from .tracing import get_tracer, set_common_attrs
 
 _CAPITALS = {
     "france": "Paris", "japan": "Tokyo", "kenya": "Nairobi", "brazil": "Brasilia",
@@ -49,22 +51,35 @@ class Scratchpad:
         self._stale_counter = 0
 
     def write(self, key: str, value: str) -> dict:
-        versions = self._values.setdefault(key, [])
-        versions.append(value)
-        return {"key": key, "stored": True, "version": len(versions)}
+        tracer = get_tracer()
+        with tracer.start_as_current_span(A.MEMORY_WRITE_SPAN) as span:
+            set_common_attrs(span, "TOOL", "create_memory")
+            versions = self._values.setdefault(key, [])
+            versions.append(value)
+            span.set_attribute("gen_ai.memory.store.key", key)
+            span.set_attribute(A.MEMORY_LATEST_ACKED_VERSION, len(versions))
+            return {"key": key, "stored": True, "version": len(versions)}
 
     def read(self, key: str) -> dict:
-        versions = self._values.get(key)
-        if not versions:
-            return {"key": key, "found": False}  # nothing to be consistent with
-        latest = len(versions)
-        observed = latest
-        if self.inject_stale and latest >= 2:
-            self._stale_counter += 1
-            if self._stale_counter % 2 == 1:
-                observed = latest - 1
-        self._reads.append(MemoryRead(observed_version=observed, latest_acked_version=latest))
-        return {"key": key, "found": True, "value": versions[observed - 1], "version": observed}
+        tracer = get_tracer()
+        with tracer.start_as_current_span(A.MEMORY_READ_SPAN) as span:
+            set_common_attrs(span, "TOOL", "search_memory")
+            span.set_attribute("gen_ai.memory.store.key", key)
+            versions = self._values.get(key)
+            if not versions:
+                span.set_attribute("memory.found", False)
+                return {"key": key, "found": False}  # nothing to be consistent with
+            latest = len(versions)
+            observed = latest
+            if self.inject_stale and latest >= 2:
+                self._stale_counter += 1
+                if self._stale_counter % 2 == 1:
+                    observed = latest - 1
+            self._reads.append(MemoryRead(observed_version=observed, latest_acked_version=latest))
+            span.set_attribute("memory.found", True)
+            span.set_attribute(A.MEMORY_OBSERVED_VERSION, observed)
+            span.set_attribute(A.MEMORY_LATEST_ACKED_VERSION, latest)
+            return {"key": key, "found": True, "value": versions[observed - 1], "version": observed}
 
     def drain_reads(self) -> list[MemoryRead]:
         reads, self._reads = self._reads, []
