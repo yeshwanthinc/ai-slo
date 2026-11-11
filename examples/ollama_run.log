@@ -1,0 +1,62 @@
+Ollama OK at http://localhost:11434, model 'qwen2.5:7b'
+[1/30] arithmetic: What is 17 plus 25? Use the add tool.
+    -> completed in 2 steps
+[2/30] arithmetic: Add 3.5 and 4.25 with the add tool, then tell me the result.
+    -> completed in 2 steps
+[3/30] arithmetic: What is 1024 plus 976? Use the add tool.
+    -> completed in 2 steps
+[4/30] arithmetic: Use the add tool to compute 0.1 plus 0.2.
+    -> completed in 2 steps
+[5/30] arithmetic: Add -8 and 3 with the add tool and report the sum.
+    -> completed in 2 steps
+[6/30] arithmetic: What is 99 plus 1? Use the add tool.
+    -> completed in 2 steps
+[7/30] lookup: What is the capital of Japan? Use the capital_of tool.
+    -> completed in 2 steps
+[8/30] lookup: What is the capital of Kenya? Use the capital_of tool.
+    -> completed in 2 steps
+[9/30] lookup: What is the capital of Brazil? Use the capital_of tool.
+    -> completed in 2 steps
+[10/30] lookup: What is the capital of Peru? Use the capital_of tool.
+    -> completed in 2 steps
+[11/30] lookup: What is the capital of Canada? Use the capital_of tool.
+    -> completed in 2 steps
+[12/30] lookup: What is the capital of Atlantis? Use the capital_of tool.
+    -> completed in 2 steps
+[13/30] lookup: What is the capital of Germany? Use the capital_of tool.
+    -> completed in 5 steps
+[14/30] research: Search the web for the population of Brazil.
+    -> completed in 2 steps
+[15/30] research: Find the latest news about OpenTelemetry using web_lookup.
+    -> completed in 2 steps
+[16/30] research: Use web_lookup to find the tallest mountain in Africa.
+    -> completed in 3 steps
+[17/30] research: Search the web for the founding year of the Medium platform.
+    -> completed in 2 steps
+[18/30] research: Look up the boiling point of water with web_lookup.
+    -> completed in 2 steps
+[19/30] memory: Save 'blue' under key 'color', then read key 'color' back and tell me it.
+    -> completed in 2 steps
+[20/30] memory: Store 'Paris' under key 'city' and read it back.
+    -> completed in 2 steps
+[21/30] memory: Save 'alpha' under key 'code', then save 'beta' under key 'code', then read 'code' and tell me its value.
+    -> completed in 2 steps
+[22/30] memory: Save 'v1' under key 'ref', then 'v2' under key 'ref', then read 'ref' and report it.
+    -> completed in 2 steps
+[23/30] memory: Save 'red' under key 'shade', then 'green' under key 'shade', then read 'shade' and tell me the value.
+    -> completed in 2 steps
+[24/30] memory: Save 'one' under key 'num', then 'two' under key 'num', then 'three' under key 'num', then read 'num'.
+    -> completed in 2 steps
+[25/30] memory: Read key 'missing' and tell me what you find.
+    -> completed in 2 steps
+[26/30] memory: Save 'ok' under key 'status', then read 'status'.
+    -> completed in 2 steps
+[27/30] direct: What is the capital of France? Answer directly without tools.
+    -> completed in 1 steps
+[28/30] direct: What color is the sky on a clear day? Answer directly, no tools.
+    -> completed in 1 steps
+[29/30] direct: Say hello in Spanish. Answer directly, no tools.
+    -> completed in 1 steps
+[30/30] direct: What is 2 times 3? Answer directly, no tools.
+    -> completed in 1 steps
+wrote 30 records to examples/ollama_records.jsonl
